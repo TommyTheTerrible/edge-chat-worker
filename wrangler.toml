@@ -1,4 +1,4 @@
-name = "edge-chat-demo"
+name = "edge-chat"
 type = "javascript"
 workers_dev = true
 # Add your account ID here

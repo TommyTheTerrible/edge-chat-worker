@@ -292,7 +292,7 @@ export class ChatRoom {
 
     // Load the last 100 messages from the chat history stored on disk, and send them to the
     // client.
-    let storage = await this.storage.list({reverse: true, limit: 100});
+    let storage = await this.storage.list({reverse: true, limit: 20});
     let backlog = [...storage.values()];
     backlog.reverse();
     backlog.forEach(value => {
@@ -316,6 +316,7 @@ export class ChatRoom {
         // Check if the user is over their rate limit and reject the message if so.
         if (!limiter.checkLimit()) {
           webSocket.send(JSON.stringify({
+  	    name: "Server",
             error: "Your IP is being rate-limited, please try again later."
           }));
           return;
@@ -332,7 +333,7 @@ export class ChatRoom {
           // Don't let people use ridiculously long names. (This is also enforced on the client,
           // so if they get here they are not using the intended client.)
           if (session.name.length > 32) {
-            webSocket.send(JSON.stringify({error: "Name too long."}));
+            webSocket.send(JSON.stringify({name: "Server", error: "Name too long."}));
             webSocket.close(1009, "Name too long.");
             return;
           }
@@ -354,6 +355,10 @@ export class ChatRoom {
           return;
         }
 
+        if(data.rename){
+          session.name = "" + (data.name || "anonymous");
+        }
+	    
         // Construct sanitized message for storage and broadcast.
         data = { name: session.name, message: "" + data.message };
 
@@ -463,14 +468,15 @@ export class RateLimiter {
       if (request.method == "POST") {
         // POST request means the user performed an action.
         // We allow one action per 5 seconds.
-        this.nextAllowedTime += 5;
+        this.nextAllowedTime += 1;
       }
 
       // Return the number of seconds that the client needs to wait.
       //
       // We provide a "grace" period of 20 seconds, meaning that the client can make 4-5 requests
       // in a quick burst before they start being limited.
-      let cooldown = Math.max(0, this.nextAllowedTime - now - 20);
+	    // Tommy change this back to 30-60 seconds
+      let cooldown = Math.max(0, this.nextAllowedTime - now - 240);
       return new Response(cooldown);
     })
   }
